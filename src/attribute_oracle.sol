@@ -6,7 +6,7 @@ import "./chainlink/src/v0.5/vendor/Ownable.sol";
 contract AttributeOracle is ChainlinkClient, Ownable {
     uint256 oraclePayment;
     bytes32 jobID;
-    mapping (bytes32 => mapping(bytes32 => bytes)) public values;
+    mapping (bytes32 => mapping(bytes32 => bytes32)) public values;
     mapping (bytes32 => Request) requests;
 
     struct Request {
@@ -42,7 +42,7 @@ contract AttributeOracle is ChainlinkClient, Ownable {
         return bytesArray;
     }
 
-    function fulfill(bytes32 _requestID, bytes memory _result) public recordChainlinkFulfillment(_requestID) {
+    function fulfill(bytes32 _requestID, bytes32 _result) public recordChainlinkFulfillment(_requestID) {
         require(requests[_requestID].documentID > 0, "oracle/request doesn't exists");
         Request memory request = requests[_requestID];
         delete requests[_requestID];
