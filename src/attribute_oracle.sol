@@ -1,9 +1,8 @@
 pragma solidity >=0.5.0 <0.6.0;
 
 import "./chainlink/src/v0.5/ChainlinkClient.sol";
-import "./chainlink/src/v0.5/vendor/Ownable.sol";
 
-contract AttributeOracle is ChainlinkClient, Ownable {
+contract AttributeOracle is ChainlinkClient {
     uint256 oraclePayment;
     bytes32 jobID;
     mapping (bytes32 => mapping(bytes32 => bytes32)) public values;
@@ -25,7 +24,7 @@ contract AttributeOracle is ChainlinkClient, Ownable {
         jobID = _jobID;
     }
 
-    function fetchAttribute(bytes32 _documentID, bytes32 _attributeKey) public onlyOwner {
+    function fetchAttribute(bytes32 _documentID, bytes32 _attributeKey) public {
         Chainlink.Request memory req = buildChainlinkRequest(jobID, address(this), this.fulfill.selector);
         req.add("method", "read");
         req.addBytes("documentID", bytes32ToBytes(_documentID));
