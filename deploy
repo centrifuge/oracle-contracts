@@ -7,9 +7,9 @@ JOB_ID=${JOB_ID:-"0x2a9c6b27a0dd48529b9d44dd8c48eb730000000000000000000000000000
 
 dapp update
 dapp --use solc:0.5.0 build --extract
-ORACLE=$(seth send --create out/AttributeOracle.bin 'AttributeOracle(address,address,bytes32,uint256)' $LINK_CONTRACT $ORACLE_CONTRACT $JOB_ID $ORACLE_PAYMENT)
+ORACLE=$(seth send --create out/NFTOracle.bin 'NFTOracle(address,address,bytes32,uint256)' $LINK_CONTRACT $ORACLE_CONTRACT $JOB_ID $ORACLE_PAYMENT)
 
 set +ex
 echo "-------------------------------------------------------------------------------"
-echo "AttributeOracle deployed to: $ORACLE"
+echo "NFTOracle deployed to: $ORACLE"
 echo "-------------------------------------------------------------------------------"
