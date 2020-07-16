@@ -66,7 +66,7 @@ contract NFTOracle is ChainlinkClient {
         emit NFTValueRequested(_nftID);
     }
 
-    function bytes32ToBytes(bytes32 _bytes32) internal pure returns (bytes memory){
+    function bytes32ToBytes(bytes32 _bytes32) public pure returns (bytes memory){
         bytes memory bytesArray = new bytes(32);
         for (uint256 i; i < 32; i++) {
             bytesArray[i] = _bytes32[i];
@@ -86,16 +86,28 @@ contract NFTOracle is ChainlinkClient {
     function getRiskAndValue(bytes32 _result) internal pure returns (uint128, uint128) {
         bytes memory riskb = sliceFromBytes32(_result, 0, 16);
         bytes memory valueb = sliceFromBytes32(_result, 16, 32);
-        return (abi.decode(riskb, (uint128)), abi.decode(valueb, (uint128)));
+        return (toUint128(riskb), toUint128(valueb));
     }
 
-    function sliceFromBytes32(bytes32 data, uint start, uint length) internal pure returns (bytes memory) {
+    function sliceFromBytes32(bytes32 data, uint start, uint length) public pure returns (bytes memory) {
         require(length<=32, "length cannot be more than 32");
-        bytes memory res = new bytes(length);
-        for (uint i=0; i<length; i++){
+        require(start<length, "start index cannot be more than length");
+        bytes memory res = new bytes(length-start);
+        for (uint i=0; i<length-start; i++){
             res[i] = data[i+start];
         }
         return res;
+    }
+
+    function toUint128(bytes memory _bytes) public pure returns (uint128) {
+        require(_bytes.length >= (16), "Read out of bounds");
+        uint128 tempUint;
+
+        assembly {
+            tempUint := mload(add(add(_bytes, 0x10), 0))
+        }
+
+        return tempUint;
     }
 
     function onTokenTransfer(address, uint256 _amount, bytes memory _data) public {
