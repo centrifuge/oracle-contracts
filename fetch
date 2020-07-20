@@ -2,10 +2,13 @@ set -ex
 
 NFT_ID=${NFT_ID:-41655702060068977596055658041433754581741912055812601102818571701136633124578}
 ATTRIBUTE_KEY=${ATTRIBUTE_KEY:-0xe24e7917d4fcaf79095539ac23af9f6d5c80ea8b0d95c9cd860152bff8fdab17}
-ORACLE=${ORACLE:-0xb5099a46fc51076c0b0cdf038a35ca67ae1c0280}
+ORACLE=${ORACLE:-0x7f0d2fd59c5cc12dc4d122ded2af95fb3da775cc}
 LINK=${LINK:-0xa36085F69e2889c224210F603D836748e7dC0088}
+NFT_UPDATE=${NFT_UPDATE:-0x84602341abace6e458541e5f5bab76cb573a2767}
 ORACLE_PAYMENT=${ORACLE_PAYMENT:-1000000000000000000}
-seth call $ORACLE "nftData(uint)(uint,uint128,uint128,uint48)" "$NFT_ID"
-data=$(seth --to-uint256 "$NFT_ID")
-seth send $LINK "transferAndCall(address,uint256,bytes)" $ORACLE $ORACLE_PAYMENT $data
-seth call $ORACLE "nftData(uint)(uint,uint128,uint128,uint48)" $NFT_ID
+seth send $LINK "approve(address,uint256)(bool)" $ORACLE $ORACLE_PAYMENT
+seth send $ORACLE "fetch(uint)" $NFT_ID
+echo "Fetching value from Oracle"
+seth call $ORACLE "nftData(uint)(uint80,uint128,uint48)" $NFT_ID
+echo "Fetching value from NFTUpdate"
+seth call $NFT_UPDATE "nftData()(bytes32,uint,uint)"

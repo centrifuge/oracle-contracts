@@ -27,7 +27,7 @@ contract ChainlinkClient {
 
   ENSInterface private ens;
   bytes32 private ensNode;
-  LinkTokenInterface private link;
+  LinkTokenInterface internal link;
   ChainlinkRequestInterface private oracle;
   uint256 private requestCount = 1;
   mapping(bytes32 => address) private pendingRequests;
