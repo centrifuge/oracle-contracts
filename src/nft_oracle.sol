@@ -3,7 +3,7 @@ pragma solidity >=0.5.0 <0.6.0;
 import "./chainlink/src/v0.5/ChainlinkClient.sol";
 
 contract TokenDataLike {
-    function data(uint nftID) public view returns (address, uint, bytes32, uint64);
+    function data(uint tokenID) public view returns (address, uint, bytes32, uint64);
 }
 
 contract NFTUpdateLike {
@@ -34,8 +34,8 @@ contract NFTOracle is ChainlinkClient {
         uint48 timestamp;
     }
 
-    event NFTValueRequested(uint indexed nftID);
-    event NFTValueFetched(uint indexed nftID);
+    event NFTValueRequested(uint indexed tokenID);
+    event NFTValueFetched(uint indexed tokenID);
 
     constructor (
         address _link,
@@ -61,12 +61,12 @@ contract NFTOracle is ChainlinkClient {
         nftUpdate = NFTUpdateLike(_nftUpdate);
     }
 
-    function fetch(uint _nftID) public {
+    function fetch(uint tokenID) public {
         // transfer the link to oracle from the sender
         require(link.transferFrom(msg.sender, address(this), oraclePayment), "failed to transfer LINK");
 
         // fetch document ID from the tokenData for this nftID
-        (, , bytes32 documentID, ) = tokenData.data(_nftID);
+        (, , bytes32 documentID, ) = tokenData.data(tokenID);
         require(documentID != 0 , "not a valid document ID");
 
         // initiate chainlink request
@@ -76,8 +76,8 @@ contract NFTOracle is ChainlinkClient {
         req.addBytes("attribute", bytes32ToBytes(attributeKey));
         req.addBytes("fingerprint", bytes32ToBytes(fingerprint));
         bytes32 requestID = sendChainlinkRequest(req, oraclePayment);
-        requests[requestID] = _nftID;
-        emit NFTValueRequested(_nftID);
+        requests[requestID] = tokenID;
+        emit NFTValueRequested(tokenID);
     }
 
     function bytes32ToBytes(bytes32 _bytes32) internal pure returns (bytes memory){
@@ -90,15 +90,14 @@ contract NFTOracle is ChainlinkClient {
 
     function fulfill(bytes32 _requestID, bytes32 _result) public recordChainlinkFulfillment(_requestID) {
         require(requests[_requestID] > 0, "oracle/request doesn't exists");
-        uint256 nftToken = requests[_requestID];
+        uint256 tokenID = requests[_requestID];
         delete requests[_requestID];
         (uint80 risk, uint128 value) = getRiskAndValue(_result);
-        nftData[nftToken] = NFTData(risk, value, uint48(block.timestamp));
-        emit NFTValueFetched(nftToken);
+        nftData[tokenID] = NFTData(risk, value, uint48(block.timestamp));
+        emit NFTValueFetched(tokenID);
 
         // pass value to NFT update
-        bytes32 nftID = keccak256(abi.encodePacked(address(tokenData), nftToken));
-        nftUpdate.update(nftID, uint(value), uint(risk));
+        nftUpdate.update(keccak256(abi.encodePacked(address(tokenData), tokenID)), uint(value), uint(risk));
     }
 
     function getRiskAndValue(bytes32 _result) public pure returns (uint80, uint128) {
@@ -107,9 +106,9 @@ contract NFTOracle is ChainlinkClient {
         return (uint80(toUint128(riskb)), toUint128(valueb));
     }
 
-    function sliceFromBytes32(bytes32 data, uint start, uint length) internal pure returns (bytes memory) {
-        bytes memory res = new bytes(length-start);
-        for (uint i=0; i<length-start; i++){
+    function sliceFromBytes32(bytes32 data, uint start, uint end) internal pure returns (bytes memory) {
+        bytes memory res = new bytes(end -start);
+        for (uint i=0; i< end -start; i++){
             res[i] = data[i+start];
         }
         return res;
