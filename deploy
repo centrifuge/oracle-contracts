@@ -10,7 +10,19 @@ FINGERPRINT=${FINGERPRINT:-"0x04f4bbcee9e17fb50627e11537551204ea5e00b1ed19849215
 
 dapp update
 dapp --use solc:0.5.0 build --extract
-ORACLE=$(seth send --create out/NFTOracle.bin 'NFTOracle(address,address,bytes32,uint256,address,bytes32,bytes32)' $LINK_CONTRACT $ORACLE_CONTRACT $JOB_ID $ORACLE_PAYMENT $REGISTRY $ATTR_KEY $FINGERPRINT)
+
+# deploy mock contract if not set
+if [[ -z "${NFT_UPDATE}" ]]; then
+  echo "Deploying NFTUpdate contract"
+  NFT_UPDATE=$(seth send --create out/NFTUpdate.bin 'NFTUpdate()')
+  set +ex
+  echo "-------------------------------------------------------------------------------"
+  echo "NFTUpdate deployed to: $NFT_UPDATE"
+  echo "-------------------------------------------------------------------------------"
+fi
+
+
+ORACLE=$(seth send --create out/NFTOracle.bin 'NFTOracle(address,address,bytes32,uint256,address,address,bytes32,bytes32)' $LINK_CONTRACT $ORACLE_CONTRACT $JOB_ID $ORACLE_PAYMENT $NFT_UPDATE $REGISTRY $ATTR_KEY $FINGERPRINT)
 
 set +ex
 echo "-------------------------------------------------------------------------------"

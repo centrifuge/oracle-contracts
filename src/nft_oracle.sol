@@ -6,6 +6,10 @@ contract TokenDataLike {
     function data(uint nftID) public view returns (address, uint, bytes32, uint64);
 }
 
+contract NFTUpdateLike {
+    function update(bytes32 nftID, uint value, uint risk) public;
+}
+
 contract NFTOracle is ChainlinkClient {
     uint256 oraclePayment;
     bytes32 jobID;
@@ -21,9 +25,11 @@ contract NFTOracle is ChainlinkClient {
     // nft registry that holds the metadata for each nft
     TokenDataLike tokenData;
 
+    // nft update that holds the value of NFT's risk and value
+    NFTUpdateLike nftUpdate;
+
     struct NFTData {
-        uint nftID;
-        uint128 riskScore;
+        uint80 riskScore;
         uint128 value;
         uint48 timestamp;
     }
@@ -36,6 +42,7 @@ contract NFTOracle is ChainlinkClient {
         address _oracle,
         bytes32 _jobID,
         uint256 _oraclePayment,
+        address _nftUpdate,
         address _registry,
         bytes32 _attributeKey,
         bytes32 _fingerprint) public {
@@ -51,11 +58,18 @@ contract NFTOracle is ChainlinkClient {
         attributeKey = _attributeKey;
         fingerprint = _fingerprint;
         tokenData = TokenDataLike(_registry);
+        nftUpdate = NFTUpdateLike(_nftUpdate);
     }
 
-    function fetchNFTData(uint _nftID) internal {
+    function fetch(uint _nftID) public {
+        // transfer the link to oracle from the sender
+        require(link.transferFrom(msg.sender, address(this), oraclePayment), "failed to transfer LINK");
+
+        // fetch document ID from the tokenData for this nftID
         (, , bytes32 documentID, ) = tokenData.data(_nftID);
         require(documentID != 0 , "not a valid document ID");
+
+        // initiate chainlink request
         Chainlink.Request memory req = buildChainlinkRequest(jobID, address(this), this.fulfill.selector);
         req.add("method", "read");
         req.addBytes("documentID", bytes32ToBytes(documentID));
@@ -66,7 +80,7 @@ contract NFTOracle is ChainlinkClient {
         emit NFTValueRequested(_nftID);
     }
 
-    function bytes32ToBytes(bytes32 _bytes32) public pure returns (bytes memory){
+    function bytes32ToBytes(bytes32 _bytes32) internal pure returns (bytes memory){
         bytes memory bytesArray = new bytes(32);
         for (uint256 i; i < 32; i++) {
             bytesArray[i] = _bytes32[i];
@@ -76,22 +90,24 @@ contract NFTOracle is ChainlinkClient {
 
     function fulfill(bytes32 _requestID, bytes32 _result) public recordChainlinkFulfillment(_requestID) {
         require(requests[_requestID] > 0, "oracle/request doesn't exists");
-        uint256 nftID = requests[_requestID];
+        uint256 nftToken = requests[_requestID];
         delete requests[_requestID];
-        (uint128 risk, uint128 value) = getRiskAndValue(_result);
-        nftData[nftID] = NFTData(nftID, risk, value, uint48(block.timestamp));
-        emit NFTValueFetched(nftID);
+        (uint80 risk, uint128 value) = getRiskAndValue(_result);
+        nftData[nftToken] = NFTData(risk, value, uint48(block.timestamp));
+        emit NFTValueFetched(nftToken);
+
+        // pass value to NFT update
+        bytes32 nftID = keccak256(abi.encodePacked(address(tokenData), nftToken));
+        nftUpdate.update(nftID, uint(value), uint(risk));
     }
 
-    function getRiskAndValue(bytes32 _result) internal pure returns (uint128, uint128) {
+    function getRiskAndValue(bytes32 _result) public pure returns (uint80, uint128) {
         bytes memory riskb = sliceFromBytes32(_result, 0, 16);
         bytes memory valueb = sliceFromBytes32(_result, 16, 32);
-        return (toUint128(riskb), toUint128(valueb));
+        return (uint80(toUint128(riskb)), toUint128(valueb));
     }
 
-    function sliceFromBytes32(bytes32 data, uint start, uint length) public pure returns (bytes memory) {
-        require(length<=32, "length cannot be more than 32");
-        require(start<length, "start index cannot be more than length");
+    function sliceFromBytes32(bytes32 data, uint start, uint length) internal pure returns (bytes memory) {
         bytes memory res = new bytes(length-start);
         for (uint i=0; i<length-start; i++){
             res[i] = data[i+start];
@@ -99,8 +115,7 @@ contract NFTOracle is ChainlinkClient {
         return res;
     }
 
-    function toUint128(bytes memory _bytes) public pure returns (uint128) {
-        require(_bytes.length >= (16), "Read out of bounds");
+    function toUint128(bytes memory _bytes) internal pure returns (uint128) {
         uint128 tempUint;
 
         assembly {
@@ -108,12 +123,5 @@ contract NFTOracle is ChainlinkClient {
         }
 
         return tempUint;
-    }
-
-    function onTokenTransfer(address, uint256 _amount, bytes memory _data) public {
-        require(msg.sender == chainlinkTokenAddress(), "Only LINK can call");
-        require(_amount == oraclePayment, "Not enough LINK");
-        (uint nftID) = abi.decode(_data, (uint));
-        fetchNFTData(nftID);
     }
 }
