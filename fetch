@@ -1,10 +1,10 @@
 set -ex
 
 REGISTRY=${REGISTRY:-"0x648f679d855d2c9db97bb1ab14f2ecdf57d5ddb4"}
-NFT_ID=${NFT_ID:-0xb691a418b2a97f2418bc1226fee3e380207ec19a5b095db67aff6c5b154d8450}
-ORACLE=${ORACLE:-0x2179a960592f0f24a12fc16344e021816b6117e0}
+NFT_ID=${NFT_ID:-0x535e7fd4fda56f7cdf7f321cdd6c9778de7179f0285224eeee167e70ca188724}
+ORACLE=${ORACLE:-0x03ec70a868d5bdf7103c8e416b629da1bea633d6}
 LINK=${LINK:-0xa36085F69e2889c224210F603D836748e7dC0088}
-NFT_UPDATE=${NFT_UPDATE:-0x6348bf450388D259E5E9c2Fc9c853276544CcBf0}
+NFT_UPDATE=${NFT_UPDATE:-0xc63807020f7629F341D7042A9bF12d84355d4D8E}
 ORACLE_PAYMENT=${ORACLE_PAYMENT:-1000000000000000000}
 seth send $LINK "approve(address,uint256)(bool)" $ORACLE $ORACLE_PAYMENT
 seth send $ORACLE "fetch(uint)" $NFT_ID
@@ -12,6 +12,6 @@ echo "Fetching value from Oracle"
 seth call $ORACLE "nftData(uint)(uint80,uint128,uint48)" $NFT_ID
 
 echo "Fetching Value and Risk from NFTFeed"
-seth call $NFT_UPDATE 'nftID(address,uint)(bytes32)' $REGISTRY $NFT_ID
+NFT_ID=$(seth call $NFT_UPDATE 'nftID(address,uint)(bytes32)' $REGISTRY $NFT_ID)
 seth call $NFT_UPDATE 'nftValues(bytes32)(uint)' $NFT_ID
 seth call $NFT_UPDATE 'risk(bytes32)(uint)' $NFT_ID
