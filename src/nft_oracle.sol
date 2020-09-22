@@ -1,29 +1,24 @@
 pragma solidity >=0.5.0 <0.6.0;
 
-import "./chainlink/src/v0.5/ChainlinkClient.sol";
-
-contract TokenDataLike {
-    function data(uint tokenID) public view returns (address, uint, bytes32, uint64);
+contract OwnerOfLike {
+    function ownerOf(uint256 tokenId) public view returns (address);
 }
 
 contract NFTUpdateLike {
     function update(bytes32 nftID, uint value, uint risk) public;
 }
 
-contract NFTOracle is ChainlinkClient {
-    uint256 oraclePayment;
-    bytes32 jobID;
-    bytes32 attributeKey;
+contract NFTOracle {
     bytes32 fingerprint;
+
+    // mapping (nftOwners => uint);
+    mapping (address => uint) wards;
 
     // mapping (nftID => loanData);
     mapping (uint => NFTData) public nftData;
 
-    // mapping (requestId => nftID)
-    mapping (bytes32 => uint) requests;
-
     // nft registry that holds the metadata for each nft
-    TokenDataLike tokenData;
+    OwnerOfLike ownerOf;
 
     // nft update that holds the value of NFT's risk and value
     NFTUpdateLike nftUpdate;
@@ -34,70 +29,40 @@ contract NFTOracle is ChainlinkClient {
         uint48 timestamp;
     }
 
-    event NFTValueRequested(uint indexed tokenID);
-    event NFTValueFetched(uint indexed tokenID);
+    event NFTValueUpdated(uint indexed tokenID);
 
     constructor (
-        address _link,
-        address _oracle,
-        bytes32 _jobID,
-        uint256 _oraclePayment,
         address _nftUpdate,
         address _registry,
-        bytes32 _attributeKey,
-        bytes32 _fingerprint) public {
+        bytes32 _fingerprint,
+        address[] memory _wards) public {
 
-        if(_link == address(0)) {
-            setPublicChainlinkToken();
-        } else {
-            setChainlinkToken(_link);
-        }
-        setChainlinkOracle(_oracle);
-        oraclePayment = _oraclePayment;
-        jobID = _jobID;
-        attributeKey = _attributeKey;
         fingerprint = _fingerprint;
-        tokenData = TokenDataLike(_registry);
+        ownerOf = OwnerOfLike(_registry);
         nftUpdate = NFTUpdateLike(_nftUpdate);
-    }
-
-    function fetch(uint tokenID) public {
-        // transfer the link to oracle from the sender
-        require(link.transferFrom(msg.sender, address(this), oraclePayment), "failed to transfer LINK");
-
-        // fetch document ID from the tokenData for this nftID
-        (, , bytes32 documentID, ) = tokenData.data(tokenID);
-        require(documentID != 0 , "not a valid document ID");
-
-        // initiate chainlink request
-        Chainlink.Request memory req = buildChainlinkRequest(jobID, address(this), this.fulfill.selector);
-        req.add("method", "read");
-        req.addBytes("documentID", bytes32ToBytes(documentID));
-        req.addBytes("attribute", bytes32ToBytes(attributeKey));
-        req.addBytes("fingerprint", bytes32ToBytes(fingerprint));
-        bytes32 requestID = sendChainlinkRequest(req, oraclePayment);
-        requests[requestID] = tokenID;
-        emit NFTValueRequested(tokenID);
-    }
-
-    function bytes32ToBytes(bytes32 _bytes32) internal pure returns (bytes memory){
-        bytes memory bytesArray = new bytes(32);
-        for (uint256 i; i < 32; i++) {
-            bytesArray[i] = _bytes32[i];
+        uint i;
+        for (i=0; i<_wards.length; i++) {
+            wards[_wards[i]] = 1;
         }
-        return bytesArray;
+        wards[msg.sender] = 1;
     }
 
-    function fulfill(bytes32 _requestID, bytes32 _result) public recordChainlinkFulfillment(_requestID) {
-        require(requests[_requestID] > 0, "oracle/request doesn't exists");
-        uint256 tokenID = requests[_requestID];
-        delete requests[_requestID];
+    function rely(address usr) public auth { wards[usr] = 1; }
+    function deny(address usr) public auth { wards[usr] = 0; }
+    modifier auth { require(wards[msg.sender] == 1); _; }
+    modifier authToken(uint token) {
+        require(wards[ownerOf.ownerOf(token)] == 1, "oracle/owner not allowed");
+        _;
+    }
+
+    function update(uint tokenID, bytes32 _fingerprint, bytes32 _result) public authToken(tokenID) {
+        require(fingerprint == _fingerprint, "oracle/fingerprint mismatch");
         (uint80 risk, uint128 value) = getRiskAndValue(_result);
         nftData[tokenID] = NFTData(risk, value, uint48(block.timestamp));
-        emit NFTValueFetched(tokenID);
 
         // pass value to NFT update
-        nftUpdate.update(keccak256(abi.encodePacked(address(tokenData), tokenID)), uint(value), uint(risk));
+        nftUpdate.update(keccak256(abi.encodePacked(address(ownerOf), tokenID)), uint(value), uint(risk));
+        emit NFTValueUpdated(tokenID);
     }
 
     function getRiskAndValue(bytes32 _result) public pure returns (uint80, uint128) {
