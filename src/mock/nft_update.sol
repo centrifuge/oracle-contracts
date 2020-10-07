@@ -5,6 +5,7 @@ contract NFTUpdate {
     uint value;
     uint riskv;
     address owner;
+    uint maturityDate;
 
     constructor() public {
         owner = msg.sender;
@@ -14,6 +15,12 @@ contract NFTUpdate {
         nftIDs = _nftID;
         value = _value;
         riskv = _risk;
+    }
+
+    function file(bytes32 name, bytes32 _nftID, uint _date) public {
+        require(name=="maturityDate", "invalid name");
+        require(_nftID == nftIDs, "invalid nftID");
+        maturityDate = _date;
     }
 
     function nftValues(bytes32) public view returns (uint){
@@ -30,5 +37,9 @@ contract NFTUpdate {
 
     function ownerOf(uint256) public view returns (address) {
         return owner;
+    }
+
+    function data(uint tokenID) public view returns (address, uint, bytes32, uint64) {
+        return (address(0), tokenID, nftIDs, 10);
     }
 }

@@ -1,11 +1,13 @@
 pragma solidity >=0.5.0 <0.6.0;
 
-contract OwnerOfLike {
+contract NFTRegistryLike {
     function ownerOf(uint256 tokenId) public view returns (address);
+    function data(uint tokenID) public view returns (address, uint, bytes32, uint64);
 }
 
 contract NFTUpdateLike {
     function update(bytes32 nftID, uint value, uint risk) public;
+    function file(bytes32 name, bytes32 nftID, uint maturityDate) public;
 }
 
 contract NFTOracle {
@@ -18,7 +20,7 @@ contract NFTOracle {
     mapping (uint => NFTData) public nftData;
 
     // nft registry that holds the metadata for each nft
-    OwnerOfLike ownerOf;
+    NFTRegistryLike registry;
 
     // nft update that holds the value of NFT's risk and value
     NFTUpdateLike nftUpdate;
@@ -26,6 +28,7 @@ contract NFTOracle {
     struct NFTData {
         uint80 riskScore;
         uint128 value;
+        uint64 maturityDate;
         uint48 timestamp;
     }
 
@@ -38,7 +41,7 @@ contract NFTOracle {
         address[] memory _wards) public {
 
         fingerprint = _fingerprint;
-        ownerOf = OwnerOfLike(_registry);
+        registry = NFTRegistryLike(_registry);
         nftUpdate = NFTUpdateLike(_nftUpdate);
         uint i;
         for (i=0; i<_wards.length; i++) {
@@ -51,17 +54,20 @@ contract NFTOracle {
     function deny(address usr) public auth { wards[usr] = 0; }
     modifier auth { require(wards[msg.sender] == 1); _; }
     modifier authToken(uint token) {
-        require(wards[ownerOf.ownerOf(token)] == 1, "oracle/owner not allowed");
+        require(wards[registry.ownerOf(token)] == 1, "oracle/owner not allowed");
         _;
     }
 
     function update(uint tokenID, bytes32 _fingerprint, bytes32 _result) public authToken(tokenID) {
         require(fingerprint == _fingerprint, "oracle/fingerprint mismatch");
         (uint80 risk, uint128 value) = getRiskAndValue(_result);
-        nftData[tokenID] = NFTData(risk, value, uint48(block.timestamp));
+        (, , , uint64 maturityDate) = registry.data(tokenID);
+        nftData[tokenID] = NFTData(risk, value, maturityDate, uint48(block.timestamp));
 
         // pass value to NFT update
-        nftUpdate.update(keccak256(abi.encodePacked(address(ownerOf), tokenID)), uint(value), uint(risk));
+        bytes32 nftID = keccak256(abi.encodePacked(address(registry), tokenID));
+        nftUpdate.update(nftID, uint(value), uint(risk));
+        nftUpdate.file("maturityDate",nftID,uint(maturityDate));
         emit NFTValueUpdated(tokenID);
     }
 
