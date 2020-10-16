@@ -13,8 +13,11 @@ contract NFTUpdateLike {
 contract NFTOracle {
     bytes32 fingerprint;
 
-    // mapping (nftOwners => uint);
+    // mapping (owners => uint);
     mapping (address => uint) wards;
+
+    // mapping (token holders)
+    mapping (address => uint) tokenHolders;
 
     // mapping (nftID => loanData);
     mapping (uint => NFTData) public nftData;
@@ -38,23 +41,29 @@ contract NFTOracle {
         address _nftUpdate,
         address _registry,
         bytes32 _fingerprint,
-        address[] memory _wards) public {
+        address[] memory _tokenHolders) public {
 
         fingerprint = _fingerprint;
         registry = NFTRegistryLike(_registry);
         nftUpdate = NFTUpdateLike(_nftUpdate);
+
+        // update nft token holders
         uint i;
-        for (i=0; i<_wards.length; i++) {
-            wards[_wards[i]] = 1;
+        for (i=0; i<_tokenHolders.length; i++) {
+            tokenHolders[_tokenHolders[i]] = 1;
         }
+
+        // add the creator to auth
         wards[msg.sender] = 1;
+        tokenHolders[msg.sender] = 1;
     }
 
     function rely(address usr) public auth { wards[usr] = 1; }
     function deny(address usr) public auth { wards[usr] = 0; }
+    function addTokenHolder(address usr) public auth { tokenHolders[usr] = 1; }
     modifier auth { require(wards[msg.sender] == 1); _; }
     modifier authToken(uint token) {
-        require(wards[registry.ownerOf(token)] == 1, "oracle/owner not allowed");
+        require(tokenHolders[registry.ownerOf(token)] == 1, "oracle/owner not allowed");
         _;
     }
 
