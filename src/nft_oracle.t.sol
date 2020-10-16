@@ -9,7 +9,7 @@ contract AttributeOracleTest is DSTest {
     function setUp() public {
         address[] memory wards = new address[](1);
         wards[0] = address(3);
-        contracts = new NFTOracle(address(1), address(2), 0x5a6f668df54545ee842e111a13c36d6b00000000000000000000000000000000, wards);
+        contracts = new NFTOracle(address(1), address(2), 0x5a6f668df54545ee842e111a13c36d6b00000000000000000000000000000000, address(0), wards);
     }
 
     function test_risk_value() public {

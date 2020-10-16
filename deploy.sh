@@ -1,9 +1,10 @@
 set -ex
 
-NFT_UPDATE=${NFT_UPDATE:-0x677B85998F15921982B1548763F01Ac6C265B8Eb}
-REGISTRY=${REGISTRY:-0xbea49ad824ece7125bd3e6050fd1aa3eba16e5cd}
-FINGERPRINT=${FINGERPRINT:-"0x5fc3b5d083154f64446147e9044b3d837881e8874dcbfbfead8f3e3327d85b08"}
-WARDS=[]
+NFT_UPDATE=${NFT_UPDATE:-0x69504da6B2Cd8320B9a62F3AeD410a298d3E7Ac6}
+REGISTRY=${REGISTRY:-0xa78C17921E7E060c246AC9575B01fF0Fb29BCeaE}
+FINGERPRINT=${FINGERPRINT:-"0x949a96c5d7dd13f6e0ecec4aec9c7cd24cc9b6b4688146256dc565af9a3047f0"}
+WARD=${WARD:-"0xf3BceA7494D8f3ac21585CA4b0E52aa175c24C25"}
+TOKEN_HOLDERS=[]
 
 dapp update
 dapp --use solc:0.5.0 build --extract
@@ -18,7 +19,7 @@ if [[ -z "${NFT_UPDATE}" ]]; then
   echo "-------------------------------------------------------------------------------"
 fi
 
-ORACLE=$(seth send --create out/NFTOracle.bin 'NFTOracle(address,address,bytes32,address[])' $NFT_UPDATE $REGISTRY $FINGERPRINT $WARDS)
+ORACLE=$(seth send --create out/NFTOracle.bin 'NFTOracle(address,address,bytes32,address,address[])' $NFT_UPDATE $REGISTRY $FINGERPRINT $WARD $TOKEN_HOLDERS)
 
 set +ex
 echo "-------------------------------------------------------------------------------"

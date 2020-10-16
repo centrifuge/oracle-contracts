@@ -41,6 +41,7 @@ contract NFTOracle {
         address _nftUpdate,
         address _registry,
         bytes32 _fingerprint,
+        address _ward,
         address[] memory _tokenHolders) public {
 
         fingerprint = _fingerprint;
@@ -54,8 +55,8 @@ contract NFTOracle {
         }
 
         // add the creator to auth
+        wards[_ward] = 1;
         wards[msg.sender] = 1;
-        tokenHolders[msg.sender] = 1;
     }
 
     function rely(address usr) public auth { wards[usr] = 1; }
