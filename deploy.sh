@@ -1,7 +1,8 @@
 set -ex
 
-#NFT_UPDATE=${NFT_UPDATE:-0x677B85998F15921982B1548763F01Ac6C265B8Eb}
-FINGERPRINT=${FINGERPRINT:-"0xcf00fae73fc7f9d09f8f7cd40b776de96055952b5e061d5bb6c3ddaa12794ad6"}
+NFT_UPDATE=${NFT_UPDATE:-0x677B85998F15921982B1548763F01Ac6C265B8Eb}
+REGISTRY=${REGISTRY:-0xbea49ad824ece7125bd3e6050fd1aa3eba16e5cd}
+FINGERPRINT=${FINGERPRINT:-"0x5fc3b5d083154f64446147e9044b3d837881e8874dcbfbfead8f3e3327d85b08"}
 WARDS=[]
 
 dapp update
@@ -17,7 +18,6 @@ if [[ -z "${NFT_UPDATE}" ]]; then
   echo "-------------------------------------------------------------------------------"
 fi
 
-REGISTRY=${REGISTRY:-$NFT_UPDATE}
 ORACLE=$(seth send --create out/NFTOracle.bin 'NFTOracle(address,address,bytes32,address[])' $NFT_UPDATE $REGISTRY $FINGERPRINT $WARDS)
 
 set +ex
