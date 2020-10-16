@@ -60,10 +60,11 @@ contract NFTOracle {
 
     function rely(address usr) public auth { wards[usr] = 1; }
     function deny(address usr) public auth { wards[usr] = 0; }
-    function addTokenHolder(address usr) public auth { tokenHolders[usr] = 1; }
+    function relyTokenHolder(address usr) public auth { tokenHolders[usr] = 1; }
+    function denyTokenHolder(address usr) public auth { tokenHolders[usr] = 0; }
     modifier auth { require(wards[msg.sender] == 1); _; }
     modifier authToken(uint token) {
-        require(tokenHolders[registry.ownerOf(token)] == 1, "oracle/owner not allowed");
+        require(tokenHolders[registry.ownerOf(token)] == 1, "oracle/token owner not allowed");
         _;
     }
 
