@@ -69,6 +69,10 @@ contract NFTOracle {
         _;
     }
 
+    function depend(address _nftUpdate) public auth {
+        nftUpdate = NFTUpdateLike(_nftUpdate);
+    }
+
     function update(uint tokenID, bytes32 _fingerprint, bytes32 _result) public authToken(tokenID) {
         require(fingerprint == _fingerprint, "oracle/fingerprint mismatch");
         (uint80 risk, uint128 value) = getRiskAndValue(_result);
