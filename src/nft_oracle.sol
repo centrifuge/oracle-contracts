@@ -11,22 +11,22 @@ contract NFTUpdateLike {
 }
 
 contract NFTOracle {
-    bytes32 fingerprint;
+    bytes32 public fingerprint;
 
     // mapping (owners => uint);
-    mapping (address => uint) wards;
+    mapping (address => uint) public wards;
 
     // mapping (token holders)
-    mapping (address => uint) tokenHolders;
+    mapping (address => uint) public tokenHolders;
 
     // mapping (nftID => loanData);
     mapping (uint => NFTData) public nftData;
 
     // nft registry that holds the metadata for each nft
-    NFTRegistryLike registry;
+    NFTRegistryLike public registry;
 
     // nft update that holds the value of NFT's risk and value
-    NFTUpdateLike nftUpdate;
+    NFTUpdateLike public nftUpdate;
 
     struct NFTData {
         uint80 riskScore;
